@@ -6,12 +6,21 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswresample/swresample.h>
-#include <libavutil/opt.h>
 #include <libavutil/channel_layout.h>
+#include <libavutil/error.h>
 }
 
 namespace nap::audio::utility
 {
+	// av_err2str() can't be used from C++
+	static std::string ffmpegError(int errnum)
+	{
+		char buf[AV_ERROR_MAX_STRING_SIZE] = {};
+		av_strerror(errnum, buf, sizeof(buf));
+		return buf;
+	}
+
+
 	bool decodeAACFileToFloatBuffer(
 		const std::string& path,
 		int targetSampleRate,
@@ -28,123 +37,123 @@ namespace nap::audio::utility
 		AVFrame* frame = av_frame_alloc();
 		bool ok = false;
 
-		// Since this module is linked against a stripped down version of FFmpeg that only contains the decoders we need, we need to register all the codecs and formats here.
-		av_register_all();
-
-		while (true)
+		// Formats and codecs are registered automatically in modern FFmpeg, av_register_all() no longer exists
+		do
 		{
+			if (!errorState.check(packet != nullptr && frame != nullptr, "Out of memory"))
+				break;
+
 			// Open the input file and read the header
-			if (avformat_open_input(&fmt, path.c_str(), nullptr, nullptr) < 0)
-			{
-				errorState.fail("Failed to open audio file '%s'", path.c_str());
-	            break;
-			}
+			int err = avformat_open_input(&fmt, path.c_str(), nullptr, nullptr);
+			if (!errorState.check(err >= 0, "Failed to open audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
+				break;
 
-			// Read the stream info from the file
-			if (avformat_find_stream_info(fmt, nullptr) < 0)
-			{
-				errorState.fail("Failed to find stream info for audio file '%s'", path.c_str());
-	            break;
-			}
+			err = avformat_find_stream_info(fmt, nullptr);
+			if (!errorState.check(err >= 0, "Failed to find stream info for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
+				break;
 
-			// Find the best audio stream in the file
-			int stream = av_find_best_stream(fmt, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
-			if (stream < 0)
-			{
-				errorState.fail("Failed to find audio stream in file '%s'", path.c_str());
-                break;
-			}
+			// Find the best audio stream and its decoder
+			const AVCodec* codec = nullptr;
+			int stream = av_find_best_stream(fmt, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
+			if (!errorState.check(stream >= 0 && codec != nullptr, "Failed to find decodable audio stream in file '%s'", path.c_str()))
+				break;
 
-			// Find the decoder for the audio stream
-			const AVCodec* codec = avcodec_find_decoder(fmt->streams[stream]->codecpar->codec_id);
-			if (codec == nullptr)
-			{
-				errorState.fail("Failed to find decoder for audio file '%s'", path.c_str());
-                break;
-			}
-
-			// Allocate a codec context for the decoder
 			ctx = avcodec_alloc_context3(codec);
-			if (ctx == nullptr)
-			{
-				errorState.fail("Failed to allocate decoder context for audio file '%s'", path.c_str());
-                break;
-			}
+			if (!errorState.check(ctx != nullptr, "Failed to allocate decoder context for audio file '%s'", path.c_str()))
+				break;
 
-			// Copy codec parameters from input stream to output codec context
-			if (avcodec_parameters_to_context(ctx, fmt->streams[stream]->codecpar) < 0)
-			{
-				errorState.fail("Failed to copy codec parameters to decoder context for audio file '%s'", path.c_str());
-                break;
-			}
+			err = avcodec_parameters_to_context(ctx, fmt->streams[stream]->codecpar);
+			if (!errorState.check(err >= 0, "Failed to copy codec parameters for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
+				break;
 
-			// Open the codec
-			if (avcodec_open2(ctx, codec, nullptr) < 0)
-			{
-				errorState.fail("Failed to open decoder for audio file '%s'", path.c_str());
-                break;
-			}
+			err = avcodec_open2(ctx, codec, nullptr);
+			if (!errorState.check(err >= 0, "Failed to open decoder for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
+				break;
 
-			// Set output sample rate and channel count
+			// Fall back to a default layout when the stream doesn't specify one
+			if (ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC && ctx->ch_layout.nb_channels > 0)
+				av_channel_layout_default(&ctx->ch_layout, ctx->ch_layout.nb_channels);
+
 			outSampleRate = targetSampleRate > 0 ? targetSampleRate : ctx->sample_rate;
-			outChannels = ctx->channels;
-			uint64_t layout = ctx->channel_layout != 0 ? ctx->channel_layout : av_get_default_channel_layout(ctx->channels);
+			outChannels = ctx->ch_layout.nb_channels;
+			if (!errorState.check(outChannels > 0 && ctx->sample_rate > 0, "Invalid audio stream properties in file '%s'", path.c_str()))
+				break;
 
 			// Converts decoder output (usually planar float) to interleaved float, resampling to the target rate
-			swr = swr_alloc_set_opts(nullptr, layout, AV_SAMPLE_FMT_FLT, outSampleRate,
-									 layout, ctx->sample_fmt, ctx->sample_rate, 0, nullptr);
-			if (swr == nullptr || swr_init(swr) < 0)
-			{
-				errorState.fail("Failed to initialize resampler for audio file '%s'", path.c_str());
-                break;
-			}
+			err = swr_alloc_set_opts2(&swr,
+									  &ctx->ch_layout, AV_SAMPLE_FMT_FLT, outSampleRate,
+									  &ctx->ch_layout, ctx->sample_fmt, ctx->sample_rate, 0, nullptr);
+			if (!errorState.check(err >= 0, "Failed to create resampler for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
+				break;
 
-			auto convert = [&](AVFrame* f)
+			err = swr_init(swr);
+			if (!errorState.check(err >= 0, "Failed to initialize resampler for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
+				break;
+
+			// Resamples one frame, or flushes the resampler when f is null
+			auto convert = [&](const AVFrame* f)
 			{
+				int in_samples = f != nullptr ? f->nb_samples : 0;
+
 				// Upper bound includes samples buffered inside the resampler
-				int max_out = swr_get_out_samples(swr, f != nullptr ? f->nb_samples : 0);
-				if (max_out <= 0) return true;
+				int max_out = swr_get_out_samples(swr, in_samples);
+				if (max_out <= 0)
+					return true;
+
 				size_t offset = outBuffer.size();
 				outBuffer.resize(offset + static_cast<size_t>(max_out) * outChannels);
 				uint8_t* out[1] = { reinterpret_cast<uint8_t*>(outBuffer.data() + offset) };
 				int n = swr_convert(swr, out, max_out,
 									f != nullptr ? const_cast<const uint8_t**>(f->extended_data) : nullptr,
-									f != nullptr ? f->nb_samples : 0);
-				if (n < 0) return false;
+									in_samples);
+				if (!errorState.check(n >= 0, "Failed to resample audio file '%s': %s", path.c_str(), ffmpegError(n).c_str()))
+					return false;
+
 				outBuffer.resize(offset + static_cast<size_t>(n) * outChannels);
 				return true;
 			};
 
-			bool error = false;
-			while (!error && av_read_frame(fmt, packet) >= 0)
+			// Receives all frames currently available from the decoder
+			auto drain = [&]()
 			{
-				if (packet->stream_index == stream && avcodec_send_packet(ctx, packet) >= 0)
+				int ret;
+				while ((ret = avcodec_receive_frame(ctx, frame)) >= 0)
 				{
-					while (avcodec_receive_frame(ctx, frame) >= 0)
-					{
-						if (!convert(frame))
-						{
-							error = true;
-							break;
-						}
-					}
+					bool converted = convert(frame);
+					av_frame_unref(frame);
+					if (!converted)
+						return false;
+				}
+				return errorState.check(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF,
+										"Failed to decode audio file '%s': %s", path.c_str(), ffmpegError(ret).c_str());
+			};
+
+			bool failed = false;
+			while (!failed && av_read_frame(fmt, packet) >= 0)
+			{
+				if (packet->stream_index == stream)
+				{
+					int ret = avcodec_send_packet(ctx, packet);
+
+					// Skip corrupt packets
+					if (ret == AVERROR_INVALIDDATA)
+						ret = 0;
+
+					failed = !errorState.check(ret >= 0 || ret == AVERROR(EAGAIN),
+											   "Failed to decode audio file '%s': %s", path.c_str(), ffmpegError(ret).c_str()) || !drain();
 				}
 				av_packet_unref(packet);
 			}
-			if (error)
-			{
-				errorState.fail("Failed to convert audio frame for file '%s'", path.c_str());
+			if (failed)
 				break;
-			}
 
 			// Flush decoder, then resampler
 			avcodec_send_packet(ctx, nullptr);
-			while (avcodec_receive_frame(ctx, frame) >= 0)
-				convert(frame);
-			convert(nullptr);
+			if (!drain() || !convert(nullptr))
+				break;
 
 			ok = true;
-		}
+		} while (false);
 
 		// Cleanup
 		av_frame_free(&frame);
