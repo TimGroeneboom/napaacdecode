@@ -85,7 +85,7 @@ namespace nap::audio::utility
 			if (!errorState.check(outChannels > 0 && ctx->sample_rate > 0, "Invalid audio stream properties in file '%s'", path.c_str()))
 				break;
 
-			// Converts decoder output (usually planar float) to interleaved float, resampling to the target rate
+			// Converts decoder output to interleaved float, resampling to the target rate
 			err = swr_alloc_set_opts2(&swr,
 									  &ctx->ch_layout, AV_SAMPLE_FMT_FLT, outSampleRate,
 									  &ctx->ch_layout, ctx->sample_fmt, ctx->sample_rate, 0, nullptr);
@@ -107,6 +107,7 @@ namespace nap::audio::utility
 				if (max_out <= 0)
 					return true;
 
+				// Resize output buffer and convert to interleaved float
 				size_t offset = outBuffer.size();
 				outBuffer.resize(offset + static_cast<size_t>(max_out) * outChannels);
 				uint8_t* out[1] = { reinterpret_cast<uint8_t*>(outBuffer.data() + offset) };
