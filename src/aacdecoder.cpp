@@ -120,7 +120,6 @@ namespace nap::audio::utility
 				if (!errorState.check(n >= 0, "Failed to resample audio file '%s': %s", path.c_str(), ffmpegError(n).c_str()))
 					return false;
 
-				outBuffer.resize(offset + static_cast<size_t>(n) * outChannels);
 				return true;
 			};
 
