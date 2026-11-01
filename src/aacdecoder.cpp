@@ -40,6 +40,7 @@ namespace nap::audio::utility
 		// Formats and codecs are registered automatically in modern FFmpeg, av_register_all() no longer exists
 		do
 		{
+			// Ensure packet and frame were allocated
 			if (!errorState.check(packet != nullptr && frame != nullptr, "Out of memory"))
 				break;
 
@@ -48,6 +49,7 @@ namespace nap::audio::utility
 			if (!errorState.check(err >= 0, "Failed to open audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
 				break;
 
+			// Read packets of a media file to get stream information
 			err = avformat_find_stream_info(fmt, nullptr);
 			if (!errorState.check(err >= 0, "Failed to find stream info for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
 				break;
@@ -58,14 +60,17 @@ namespace nap::audio::utility
 			if (!errorState.check(stream >= 0 && codec != nullptr, "Failed to find decodable audio stream in file '%s'", path.c_str()))
 				break;
 
+			// Allocate a codec context for the decoder
 			ctx = avcodec_alloc_context3(codec);
 			if (!errorState.check(ctx != nullptr, "Failed to allocate decoder context for audio file '%s'", path.c_str()))
 				break;
 
+			// Copy codec parameters from input stream to output codec context
 			err = avcodec_parameters_to_context(ctx, fmt->streams[stream]->codecpar);
 			if (!errorState.check(err >= 0, "Failed to copy codec parameters for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
 				break;
 
+			// Initialize the decoder
 			err = avcodec_open2(ctx, codec, nullptr);
 			if (!errorState.check(err >= 0, "Failed to open decoder for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
 				break;
@@ -74,6 +79,7 @@ namespace nap::audio::utility
 			if (ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC && ctx->ch_layout.nb_channels > 0)
 				av_channel_layout_default(&ctx->ch_layout, ctx->ch_layout.nb_channels);
 
+			// Set output sample rate and channel count
 			outSampleRate = targetSampleRate > 0 ? targetSampleRate : ctx->sample_rate;
 			outChannels = ctx->ch_layout.nb_channels;
 			if (!errorState.check(outChannels > 0 && ctx->sample_rate > 0, "Invalid audio stream properties in file '%s'", path.c_str()))
@@ -86,6 +92,7 @@ namespace nap::audio::utility
 			if (!errorState.check(err >= 0, "Failed to create resampler for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
 				break;
 
+			// Initialize the resampling context
 			err = swr_init(swr);
 			if (!errorState.check(err >= 0, "Failed to initialize resampler for audio file '%s': %s", path.c_str(), ffmpegError(err).c_str()))
 				break;
@@ -128,6 +135,7 @@ namespace nap::audio::utility
 										"Failed to decode audio file '%s': %s", path.c_str(), ffmpegError(ret).c_str());
 			};
 
+			// Read packets from the input file and send them to the decoder
 			bool failed = false;
 			while (!failed && av_read_frame(fmt, packet) >= 0)
 			{
