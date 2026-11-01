@@ -1,4 +1,5 @@
 # Uses its own FFmpeg (9.x) copy, separate from the one in napvideo (distinct variable names avoid clashing cache entries)
+
 set(AACDEC_FFMPEG_DIR ${NAP_ROOT}/modules/napaacdecode/thirdparty/ffmpeg/linux/${ARCH})
 set(AACDEC_FFMPEG_INCLUDE_DIR ${AACDEC_FFMPEG_DIR}/include)
 set(AACDEC_FFMPEG_LIBRARIES "")

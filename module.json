@@ -3,6 +3,11 @@
     "mID": "ModuleInfo", 
     "RequiredModules": [
         
-    ], 
+    ],
+    "LibrarySearchPaths": {
+        "Linux": [
+            "{ROOT}/modules/napaacdecode/thirdparty/ffmpeg/linux/{BUILD_ARCH}/lib"
+        ]
+    },
     "WindowsDllSearchPaths": []
 }
