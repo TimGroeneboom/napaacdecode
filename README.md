@@ -41,10 +41,29 @@ The module links against its own FFmpeg 9.x (libavcodec 63) in `thirdparty/ffmpe
 
 The bundled libraries are a stripped build that contains just the AAC decoder, the `mov` and `aac` demuxers and the `file` protocol:
 
+Build FFMPEG 9.0.2 for linux x86_64 or arm64 with only AAC adecoder using following commands
+
 ```bash
-./configure --prefix=$PWD/install --disable-everything --disable-programs --disable-doc \
+# Build FFMPEG 9.0.2 for linux x86_64 or arm64 with only AAC adecoder using following commands
+
+git clone https://git.ffmpeg.org/ffmpeg.git && cd ffmpeg
+git checkout n9.0.2
+
+./configure \
+  --prefix=$PWD/install \
+  --disable-everything \
+  --disable-programs --disable-doc \
   --disable-avdevice --disable-avfilter --disable-swscale \
-  --enable-demuxer=mov,aac --enable-decoder=aac --enable-parser=aac,aac_latm \
+  --enable-avformat --enable-avcodec --enable-swresample \
+  --enable-demuxer=mov,aac \
+  --enable-decoder=aac \
+  --enable-parser=aac,aac_latm \
+  --enable-protocol=file \
+  --enable-shared --disable-static \
+  --enable-pic
+
+make -j$(nproc)
+make install
   --enable-protocol=file --enable-shared --disable-static --enable-pic
 make -j$(nproc) && make install
 ```
