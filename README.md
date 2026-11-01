@@ -4,7 +4,9 @@ NAP module that decodes AAC audio files (raw ADTS `.aac` or MP4/M4A containers) 
 
 ## Usage
 
-Add `napaacdecode` to the `RequiredModules` of your app or module `.json` and include the header:
+Add `napaacdecode` to the RequiredModules json of your app or module `.json` and include the header:
+
+Example Usage : 
 
 ```cpp
 #include <aacdecoder.h>
