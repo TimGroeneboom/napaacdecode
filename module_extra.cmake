@@ -12,6 +12,7 @@ foreach(ffmpeg_lib avformat avcodec swresample avutil)
 endforeach()
 
 set(ffmpeg_dest_dir modules/napaacdecode/thirdparty/ffmpeg)
+
 if(NAP_BUILD_CONTEXT MATCHES "source")
     # Our FFmpeg headers must come before any other FFmpeg headers on the include path
     target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${AACDEC_FFMPEG_INCLUDE_DIR})
@@ -20,6 +21,10 @@ if(NAP_BUILD_CONTEXT MATCHES "source")
     # Package FFmpeg into platform release
     install(DIRECTORY ${AACDEC_FFMPEG_DIR}/ DESTINATION ${ffmpeg_dest_dir}/${NAP_THIRDPARTY_PLATFORM_DIR}/${ARCH})
 else()
+    # Our FFmpeg headers must come before any other FFmpeg headers on the include path
+    target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${AACDEC_FFMPEG_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} ${AACDEC_FFMPEG_LIBRARIES})
+    
     set(MODULE_EXTRA_LIBS ${AACDEC_FFMPEG_LIBRARIES})
 
     # Install FFmpeg into packaged app
