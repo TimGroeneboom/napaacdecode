@@ -79,6 +79,9 @@ namespace nap::audio::utility
 			if (ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC && ctx->ch_layout.nb_channels > 0)
 				av_channel_layout_default(&ctx->ch_layout, ctx->ch_layout.nb_channels);
 
+			// Set the time base for the decoder context to the stream's time base
+			ctx->pkt_timebase = fmt->streams[stream]->time_base;
+
 			// Set output sample rate and channel count
 			outSampleRate = targetSampleRate > 0 ? targetSampleRate : ctx->sample_rate;
 			outChannels = ctx->ch_layout.nb_channels;

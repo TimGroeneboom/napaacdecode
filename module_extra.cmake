@@ -24,7 +24,7 @@ else()
     # Our FFmpeg headers must come before any other FFmpeg headers on the include path
     target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${AACDEC_FFMPEG_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} ${AACDEC_FFMPEG_LIBRARIES})
-    
+
     set(MODULE_EXTRA_LIBS ${AACDEC_FFMPEG_LIBRARIES})
 
     # Install FFmpeg into packaged app
