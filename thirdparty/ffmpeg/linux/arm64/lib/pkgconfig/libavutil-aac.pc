@@ -3,12 +3,12 @@ exec_prefix=${prefix}
 libdir=/home/codeflow/ffmpeg/install/lib
 includedir=/home/codeflow/ffmpeg/install/include
 
-Name: libavutil
+Name: libavutil-aac
 Description: FFmpeg utility library
 Version: 61.1.102
 Requires: 
 Requires.private: 
 Conflicts:
-Libs: -L${libdir}  -lavutil 
+Libs: -L${libdir}  -lavutil-aac 
 Libs.private: -lm -lz -latomic -pthread -lX11
 Cflags: -I${includedir}

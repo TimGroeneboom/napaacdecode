@@ -3,12 +3,12 @@ exec_prefix=${prefix}
 libdir=/home/codeflow/ffmpeg/install/lib
 includedir=/home/codeflow/ffmpeg/install/include
 
-Name: libavcodec
-Description: FFmpeg codec library
-Version: 63.1.102
+Name: libswresample-aac
+Description: FFmpeg audio resampling library
+Version: 7.1.102
 Requires: 
-Requires.private: libavutil >= 61.1.102
+Requires.private: libavutil-aac >= 61.1.102
 Conflicts:
-Libs: -L${libdir}  -lavcodec 
-Libs.private: -pthread -lm -latomic -lz
+Libs: -L${libdir}  -lswresample-aac 
+Libs.private: -lm -latomic
 Cflags: -I${includedir}
