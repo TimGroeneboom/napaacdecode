@@ -1,97 +1,72 @@
-# - Try to find ffmpeg libraries (libavcodec, libavformat and libavutil)
-# Once done this will define
-#
-# FFMPEG_FOUND - system has ffmpeg or libav
-# FFMPEG_INCLUDE_DIR - the ffmpeg include directory
-# FFMPEG_LIBRARIES - Link these to use ffmpeg
-# FFMPEG_LIBAVCODEC
-# FFMPEG_LIBAVFORMAT
-# FFMPEG_LIBAVUTIL
-#
-# Copyright (c) 2008 Andreas Schneider <mail@cynapses.org>
-# Modified for other libraries by Lasse K�rkk�inen <tronic>
-# Modified for Hedgewars by Stepik777
-#
-# Redistribution and use is allowed according to the terms of the New
-# BSD license.
-#
 
-if(FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
+if(FFMPEG_LIBRARIES_AAC AND FFMPEG_INCLUDE_DIR_AAC)
     # in cache already
-    set(FFMPEG_FOUND TRUE)
+    set(FFMPEG_FOUND_AAC TRUE)
 
-else(FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
+else(FFMPEG_LIBRARIES_AAC AND FFMPEG_INCLUDE_DIR_AAC)
+    set(FFMPEG_ROOT_DIR_AAC ${NAP_ROOT}/modules/napaacdecode/thirdparty/ffmpeg)
 
-    # Find root based on archive that is distributed
-    find_path(FFMPEG_ROOT_DIR
-        NAMES ffmpeg-3.4.2.tar.xz
-        HINTS ${NAP_ROOT}/modules/napaacdecode/thirdparty/ffmpeg
-        )
-
-    # Distributed archive
-    set(FFMPEG_SOURCE_DIST ${FFMPEG_ROOT_DIR}/ffmpeg-3.4.2.tar.xz)
-
-    set(FFMPEG_DIR ${FFMPEG_ROOT_DIR}/linux/${ARCH})
-    find_path(FFMPEG_AVCODEC_INCLUDE_DIR
+    set(FFMPEG_DIR_AAC ${FFMPEG_ROOT_DIR_AAC}/linux/${ARCH})
+    find_path(FFMPEG_AVCODEC_INCLUDE_DIR_AAC
               NAMES libavcodec/avcodec.h
-              HINTS ${FFMPEG_DIR}/include
+              HINTS ${FFMPEG_DIR_AAC}/include
               )
     # Licenses
-    find_path(FFMPEG_LICENSE_DIR
+    find_path(FFMPEG_LICENSE_DIR_AAC
         NAMES LICENSE.md
-        PATHS ${FFMPEG_ROOT_DIR}/licenses
+        PATHS ${FFMPEG_ROOT_DIR_AAC}/licenses
         )
 
-    find_library(FFMPEG_LIBAVCODEC
-                 NAMES avcodec
-                 PATHS ${FFMPEG_ROOT_DIR}/linux/${ARCH}/lib
+    find_library(FFMPEG_LIBAVCODEC_AAC
+                 NAMES avcodec-aac
+                 PATHS ${FFMPEG_ROOT_DIR_AAC}/linux/${ARCH}/lib
                  NO_DEFAULT_PATH
                  )
 
-    find_library(FFMPEG_LIBAVFORMAT
-                 NAMES avformat
-                 PATHS ${FFMPEG_ROOT_DIR}/linux/${ARCH}/lib
+    find_library(FFMPEG_LIBAVFORMAT_AAC
+                 NAMES avformat-aac
+                 PATHS ${FFMPEG_ROOT_DIR_AAC}/linux/${ARCH}/lib
                  NO_DEFAULT_PATH
                  )
 
-    find_library(FFMPEG_LIBAVUTIL
-                 NAMES avutil
-                 PATHS ${FFMPEG_ROOT_DIR}/linux/${ARCH}/lib
+    find_library(FFMPEG_LIBAVUTIL_AAC
+                 NAMES avutil-aac
+                 PATHS ${FFMPEG_ROOT_DIR_AAC}/linux/${ARCH}/lib
                  NO_DEFAULT_PATH
                  )
 
-    find_library(FFMPEG_SWRESAMPLE
-                 NAMES swresample
-                 PATHS ${FFMPEG_ROOT_DIR}/linux/${ARCH}/lib
+    find_library(FFMPEG_SWRESAMPLE_AAC
+                 NAMES swresample-aac
+                 PATHS ${FFMPEG_ROOT_DIR_AAC}/linux/${ARCH}/lib
                  NO_DEFAULT_PATH
                  )
 
-    if(FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT)
-        set(FFMPEG_FOUND TRUE)
+    if(FFMPEG_LIBAVCODEC_AAC AND FFMPEG_LIBAVFORMAT_AAC)
+        set(FFMPEG_FOUND_AAC TRUE)
     endif()
 
-    if(FFMPEG_FOUND)
-        set(FFMPEG_INCLUDE_DIR ${FFMPEG_AVCODEC_INCLUDE_DIR})
+    if(FFMPEG_FOUND_AAC)
+        set(FFMPEG_INCLUDE_DIR_AAC ${FFMPEG_AVCODEC_INCLUDE_DIR_AAC})
 
-        set(FFMPEG_LIBRARIES
-            ${FFMPEG_LIBAVCODEC}
-            ${FFMPEG_LIBAVFORMAT}
-            ${FFMPEG_LIBAVUTIL}
-            ${FFMPEG_SWRESAMPLE}
+        set(FFMPEG_LIBRARIES_AAC
+            ${FFMPEG_LIBAVCODEC_AAC}
+            ${FFMPEG_LIBAVFORMAT_AAC}
+            ${FFMPEG_LIBAVUTIL_AAC}
+            ${FFMPEG_SWRESAMPLE_AAC}
             )
-    endif(FFMPEG_FOUND)
+    endif(FFMPEG_FOUND_AAC)
 
-    if(FFMPEG_FOUND)
+    if(FFMPEG_FOUND_AAC)
         if(NOT FFMPEG_FIND_QUIETLY)
-            message(STATUS "Found FFmpeg or Libav: ${FFMPEG_LIBRARIES}, ${FFMPEG_INCLUDE_DIR}")
+            message(STATUS "Found FFmpeg or Libav: ${FFMPEG_LIBRARIES_AAC}, ${FFMPEG_INCLUDE_DIR_AAC}")
         endif(NOT FFMPEG_FIND_QUIETLY)
-    else(FFMPEG_FOUND)
+    else(FFMPEG_FOUND_AAC)
         if(FFMPEG_FIND_REQUIRED)
             message(FATAL_ERROR "Could not find libavcodec or libavformat or libavutil")
         endif(FFMPEG_FIND_REQUIRED)
-    endif(FFMPEG_FOUND)
+    endif(FFMPEG_FOUND_AAC)
 
-endif(FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
+endif(FFMPEG_LIBRARIES_AAC AND FFMPEG_INCLUDE_DIR_AAC)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(FFmpeg REQUIRED_VARS FFMPEG_LIBRARIES FFMPEG_SOURCE_DIST FFMPEG_LICENSE_DIR)
+find_package_handle_standard_args(FFmpeg_AAC REQUIRED_VARS FFMPEG_LIBRARIES_AAC FFMPEG_SOURCE_DIST FFMPEG_LICENSE_DIR_AAC)

@@ -3,7 +3,7 @@
 set(AACDEC_FFMPEG_DIR ${NAP_ROOT}/modules/napaacdecode/thirdparty/ffmpeg/linux/${ARCH})
 set(AACDEC_FFMPEG_INCLUDE_DIR ${AACDEC_FFMPEG_DIR}/include)
 set(AACDEC_FFMPEG_LIBRARIES "")
-foreach(ffmpeg_lib avformat avcodec swresample avutil)
+foreach(ffmpeg_lib avformat-aac avcodec-aac swresample-aac avutil-aac)
     find_library(AACDEC_FFMPEG_${ffmpeg_lib} NAMES ${ffmpeg_lib} PATHS ${AACDEC_FFMPEG_DIR}/lib NO_DEFAULT_PATH)
     if(NOT AACDEC_FFMPEG_${ffmpeg_lib})
         message(FATAL_ERROR "napaacdecode: could not find lib${ffmpeg_lib} in ${AACDEC_FFMPEG_DIR}/lib")
@@ -12,6 +12,7 @@ foreach(ffmpeg_lib avformat avcodec swresample avutil)
 endforeach()
 
 set(ffmpeg_dest_dir modules/napaacdecode/thirdparty/ffmpeg)
+
 
 if(NAP_BUILD_CONTEXT MATCHES "source")
     # Our FFmpeg headers must come before any other FFmpeg headers on the include path
