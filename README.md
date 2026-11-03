@@ -60,7 +60,8 @@ git checkout n9.0.2
   --enable-parser=aac,aac_latm \
   --enable-protocol=file \
   --enable-shared --disable-static \
-  --enable-pic
+  --enable-pic \
+  --build-suffix=-aac
 
 make -j$(nproc)
 make install
